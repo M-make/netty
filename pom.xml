@@ -361,6 +361,7 @@
     <module>testsuite-native-image</module>
     <module>microbench</module>
     <module>bom</module>
+      <module>test</module>
   </modules>
 
   <dependencyManagement>
@@ -702,35 +703,35 @@
     </extensions>
 
     <plugins>
-      <plugin>
-        <groupId>com.github.siom79.japicmp</groupId>
-        <artifactId>japicmp-maven-plugin</artifactId>
-        <version>0.13.1</version>
-        <configuration>
-          <parameter>
-            <breakBuildOnBinaryIncompatibleModifications>true</breakBuildOnBinaryIncompatibleModifications>
-            <breakBuildOnSourceIncompatibleModifications>true</breakBuildOnSourceIncompatibleModifications>
-            <oldVersionPattern>\d+\.\d+\.\d+\.Final</oldVersionPattern>
-            <ignoreMissingClassesByRegularExpressions>
-              <!-- ignore everything which is not part of netty itself as the plugin can not handle optional dependencies -->
-              <ignoreMissingClassesByRegularExpression>^(?!io\.netty\.).*</ignoreMissingClassesByRegularExpression>
-              <ignoreMissingClassesByRegularExpression>^io\.netty\.internal\.tcnative\..*</ignoreMissingClassesByRegularExpression>
-            </ignoreMissingClassesByRegularExpressions>
-            <excludes>
-              <exclude>@io.netty.util.internal.UnstableApi</exclude>
-            </excludes>
-          </parameter>
-          <skip>${skipJapicmp}</skip>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>cmp</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
+<!--      <plugin>-->
+<!--        <groupId>com.github.siom79.japicmp</groupId>-->
+<!--        <artifactId>japicmp-maven-plugin</artifactId>-->
+<!--        <version>0.13.1</version>-->
+<!--        <configuration>-->
+<!--          <parameter>-->
+<!--            <breakBuildOnBinaryIncompatibleModifications>true</breakBuildOnBinaryIncompatibleModifications>-->
+<!--            <breakBuildOnSourceIncompatibleModifications>true</breakBuildOnSourceIncompatibleModifications>-->
+<!--            <oldVersionPattern>\d+\.\d+\.\d+\.Final</oldVersionPattern>-->
+<!--            <ignoreMissingClassesByRegularExpressions>-->
+<!--              &lt;!&ndash; ignore everything which is not part of netty itself as the plugin can not handle optional dependencies &ndash;&gt;-->
+<!--              <ignoreMissingClassesByRegularExpression>^(?!io\.netty\.).*</ignoreMissingClassesByRegularExpression>-->
+<!--              <ignoreMissingClassesByRegularExpression>^io\.netty\.internal\.tcnative\..*</ignoreMissingClassesByRegularExpression>-->
+<!--            </ignoreMissingClassesByRegularExpressions>-->
+<!--            <excludes>-->
+<!--              <exclude>@io.netty.util.internal.UnstableApi</exclude>-->
+<!--            </excludes>-->
+<!--          </parameter>-->
+<!--          <skip>${skipJapicmp}</skip>-->
+<!--        </configuration>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <phase>verify</phase>-->
+<!--            <goals>-->
+<!--              <goal>cmp</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
         <version>${enforcer.plugin.version}</version>
@@ -790,166 +791,166 @@
           </excludes>
         </configuration>
       </plugin>
-      <plugin>
-        <!-- ensure that only methods available in java 1.6 can
-             be used even when compiling with java 1.7+ -->
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>animal-sniffer-maven-plugin</artifactId>
-        <version>1.16</version>
-        <configuration>
-          <signature>
-            <groupId>org.codehaus.mojo.signature</groupId>
-            <artifactId>java16</artifactId>
-            <version>1.1</version>
-          </signature>
-          <ignores>
-            <ignore>sun.misc.Unsafe</ignore>
-            <ignore>sun.misc.Cleaner</ignore>
-            <ignore>sun.nio.ch.DirectBuffer</ignore>
+<!--      <plugin>-->
+<!--        &lt;!&ndash; ensure that only methods available in java 1.6 can-->
+<!--             be used even when compiling with java 1.7+ &ndash;&gt;-->
+<!--        <groupId>org.codehaus.mojo</groupId>-->
+<!--        <artifactId>animal-sniffer-maven-plugin</artifactId>-->
+<!--        <version>1.16</version>-->
+<!--        <configuration>-->
+<!--          <signature>-->
+<!--            <groupId>org.codehaus.mojo.signature</groupId>-->
+<!--            <artifactId>java16</artifactId>-->
+<!--            <version>1.1</version>-->
+<!--          </signature>-->
+<!--          <ignores>-->
+<!--            <ignore>sun.misc.Unsafe</ignore>-->
+<!--            <ignore>sun.misc.Cleaner</ignore>-->
+<!--            <ignore>sun.nio.ch.DirectBuffer</ignore>-->
 
-            <ignore>java.util.zip.Deflater</ignore>
+<!--            <ignore>java.util.zip.Deflater</ignore>-->
 
-            <!-- Used for NIO -->
-            <ignore>java.nio.channels.DatagramChannel</ignore>
-            <ignore>java.nio.channels.MembershipKey</ignore>
-            <ignore>java.nio.channels.ServerSocketChannel</ignore>
-            <ignore>java.nio.channels.SocketChannel</ignore>
-            <ignore>java.net.StandardProtocolFamily</ignore>
-            <ignore>java.nio.channels.spi.SelectorProvider</ignore>
-            <ignore>java.net.SocketOption</ignore>
-            <ignore>java.net.StandardSocketOptions</ignore>
-            <ignore>java.nio.channels.NetworkChannel</ignore>
+<!--            &lt;!&ndash; Used for NIO &ndash;&gt;-->
+<!--            <ignore>java.nio.channels.DatagramChannel</ignore>-->
+<!--            <ignore>java.nio.channels.MembershipKey</ignore>-->
+<!--            <ignore>java.nio.channels.ServerSocketChannel</ignore>-->
+<!--            <ignore>java.nio.channels.SocketChannel</ignore>-->
+<!--            <ignore>java.net.StandardProtocolFamily</ignore>-->
+<!--            <ignore>java.nio.channels.spi.SelectorProvider</ignore>-->
+<!--            <ignore>java.net.SocketOption</ignore>-->
+<!--            <ignore>java.net.StandardSocketOptions</ignore>-->
+<!--            <ignore>java.nio.channels.NetworkChannel</ignore>-->
 
-            <!-- Self-signed certificate generation -->
-            <ignore>sun.security.x509.AlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>
-            <ignore>sun.security.x509.CertificateIssuerName</ignore>
-            <ignore>sun.security.x509.CertificateSerialNumber</ignore>
-            <ignore>sun.security.x509.CertificateSubjectName</ignore>
-            <ignore>sun.security.x509.CertificateValidity</ignore>
-            <ignore>sun.security.x509.CertificateVersion</ignore>
-            <ignore>sun.security.x509.CertificateX509Key</ignore>
-            <ignore>sun.security.x509.X500Name</ignore>
-            <ignore>sun.security.x509.X509CertInfo</ignore>
-            <ignore>sun.security.x509.X509CertImpl</ignore>
+<!--            &lt;!&ndash; Self-signed certificate generation &ndash;&gt;-->
+<!--            <ignore>sun.security.x509.AlgorithmId</ignore>-->
+<!--            <ignore>sun.security.x509.CertificateAlgorithmId</ignore>-->
+<!--            <ignore>sun.security.x509.CertificateIssuerName</ignore>-->
+<!--            <ignore>sun.security.x509.CertificateSerialNumber</ignore>-->
+<!--            <ignore>sun.security.x509.CertificateSubjectName</ignore>-->
+<!--            <ignore>sun.security.x509.CertificateValidity</ignore>-->
+<!--            <ignore>sun.security.x509.CertificateVersion</ignore>-->
+<!--            <ignore>sun.security.x509.CertificateX509Key</ignore>-->
+<!--            <ignore>sun.security.x509.X500Name</ignore>-->
+<!--            <ignore>sun.security.x509.X509CertInfo</ignore>-->
+<!--            <ignore>sun.security.x509.X509CertImpl</ignore>-->
 
-            <!-- SSLSession implementation -->
-            <ignore>javax.net.ssl.SSLEngine</ignore>
-            <ignore>javax.net.ssl.ExtendedSSLSession</ignore>
-            <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>
-            <ignore>javax.net.ssl.SSLParameters</ignore>
-            <ignore>javax.net.ssl.SNIServerName</ignore>
-            <ignore>javax.net.ssl.SNIHostName</ignore>
-            <ignore>javax.net.ssl.SNIMatcher</ignore>
-            <ignore>java.security.AlgorithmConstraints</ignore>
-            <ignore>java.security.cert.CertificateRevokedException</ignore>
-            <ignore>java.security.cert.CertPathValidatorException</ignore>
-            <ignore>java.security.cert.CertPathValidatorException$Reason</ignore>
-            <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>
+<!--            &lt;!&ndash; SSLSession implementation &ndash;&gt;-->
+<!--            <ignore>javax.net.ssl.SSLEngine</ignore>-->
+<!--            <ignore>javax.net.ssl.ExtendedSSLSession</ignore>-->
+<!--            <ignore>javax.net.ssl.X509ExtendedTrustManager</ignore>-->
+<!--            <ignore>javax.net.ssl.SSLParameters</ignore>-->
+<!--            <ignore>javax.net.ssl.SNIServerName</ignore>-->
+<!--            <ignore>javax.net.ssl.SNIHostName</ignore>-->
+<!--            <ignore>javax.net.ssl.SNIMatcher</ignore>-->
+<!--            <ignore>java.security.AlgorithmConstraints</ignore>-->
+<!--            <ignore>java.security.cert.CertificateRevokedException</ignore>-->
+<!--            <ignore>java.security.cert.CertPathValidatorException</ignore>-->
+<!--            <ignore>java.security.cert.CertPathValidatorException$Reason</ignore>-->
+<!--            <ignore>java.security.cert.CertPathValidatorException$BasicReason</ignore>-->
 
-            <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>
-            <ignore>java.util.concurrent.ThreadLocalRandom</ignore>
+<!--            <ignore>java.util.concurrent.ConcurrentLinkedDeque</ignore>-->
+<!--            <ignore>java.util.concurrent.ThreadLocalRandom</ignore>-->
 
-            <!-- Compression -->
-            <ignore>java.util.zip.CRC32</ignore>
-            <ignore>java.util.zip.Adler32</ignore>
+<!--            &lt;!&ndash; Compression &ndash;&gt;-->
+<!--            <ignore>java.util.zip.CRC32</ignore>-->
+<!--            <ignore>java.util.zip.Adler32</ignore>-->
 
-            <!-- NioDatagramChannel implementation -->
-            <ignore>java.net.ProtocolFamily</ignore>
+<!--            &lt;!&ndash; NioDatagramChannel implementation &ndash;&gt;-->
+<!--            <ignore>java.net.ProtocolFamily</ignore>-->
 
-            <!-- JDK 9 -->
-            <ignore>java.nio.ByteBuffer</ignore>
-            <ignore>java.nio.CharBuffer</ignore>
+<!--            &lt;!&ndash; JDK 9 &ndash;&gt;-->
+<!--            <ignore>java.nio.ByteBuffer</ignore>-->
+<!--            <ignore>java.nio.CharBuffer</ignore>-->
 
-            <!-- JDK 8 -->
-            <ignore>java.util.concurrent.atomic.LongAdder</ignore>
-            <ignore>java.util.function.BiFunction</ignore>
-            <ignore>java.security.cert.X509Certificate</ignore>
+<!--            &lt;!&ndash; JDK 8 &ndash;&gt;-->
+<!--            <ignore>java.util.concurrent.atomic.LongAdder</ignore>-->
+<!--            <ignore>java.util.function.BiFunction</ignore>-->
+<!--            <ignore>java.security.cert.X509Certificate</ignore>-->
 
-            <!-- Resolver -->
-            <ignore>java.net.InetAddress</ignore>
+<!--            &lt;!&ndash; Resolver &ndash;&gt;-->
+<!--            <ignore>java.net.InetAddress</ignore>-->
 
-            <!-- NoexecVolumeDetector -->
-            <ignore>java.nio.file.attribute.PosixFilePermission</ignore>
-            <ignore>java.nio.file.Files</ignore>
-            <ignore>java.nio.file.LinkOption</ignore>
-            <ignore>java.nio.file.Path</ignore>
-            <ignore>java.io.File</ignore>
-          </ignores>
-          <annotations>
-            <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>
-          </annotations>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>3.0.0</version>
-        <executions>
-          <execution>
-            <id>check-style</id>
-            <goals>
-              <goal>check</goal>
-            </goals>
-            <phase>validate</phase>
-            <configuration>
-              <consoleOutput>true</consoleOutput>
-              <logViolationsToConsole>true</logViolationsToConsole>
-              <failsOnError>true</failsOnError>
-              <failOnViolation>true</failOnViolation>
-              <configLocation>io/netty/checkstyle.xml</configLocation>
-              <sourceDirectories>
-                <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
-                <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>
-              </sourceDirectories>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>com.puppycrawl.tools</groupId>
-            <artifactId>checkstyle</artifactId>
-            <version>8.18</version>
-          </dependency>
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>1.0.1</version>
-        <executions>
-          <execution>
-            <id>check-style</id>
-            <goals>
-              <goal>check-format</goal>
-            </goals>
-            <phase>validate</phase>
-          </execution>
-        </executions>
-        <configuration>
-          <formatFileSets>
-            <formatFileSet>
-              <directory>${project.basedir}</directory>
-              <includes>
-                <include>**/pom.xml</include>
-              </includes>
-            </formatFileSet>
-          </formatFileSets>
-          <useDefaultFormatFileSet>false</useDefaultFormatFileSet>
-        </configuration>
-      </plugin>
+<!--            &lt;!&ndash; NoexecVolumeDetector &ndash;&gt;-->
+<!--            <ignore>java.nio.file.attribute.PosixFilePermission</ignore>-->
+<!--            <ignore>java.nio.file.Files</ignore>-->
+<!--            <ignore>java.nio.file.LinkOption</ignore>-->
+<!--            <ignore>java.nio.file.Path</ignore>-->
+<!--            <ignore>java.io.File</ignore>-->
+<!--          </ignores>-->
+<!--          <annotations>-->
+<!--            <annotation>io.netty.util.internal.SuppressJava6Requirement</annotation>-->
+<!--          </annotations>-->
+<!--        </configuration>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <phase>process-classes</phase>-->
+<!--            <goals>-->
+<!--              <goal>check</goal>-->
+<!--            </goals>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
+<!--      <plugin>-->
+<!--        <artifactId>maven-checkstyle-plugin</artifactId>-->
+<!--        <version>3.0.0</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>check-style</id>-->
+<!--            <goals>-->
+<!--              <goal>check</goal>-->
+<!--            </goals>-->
+<!--            <phase>validate</phase>-->
+<!--            <configuration>-->
+<!--              <consoleOutput>true</consoleOutput>-->
+<!--              <logViolationsToConsole>true</logViolationsToConsole>-->
+<!--              <failsOnError>true</failsOnError>-->
+<!--              <failOnViolation>true</failOnViolation>-->
+<!--              <configLocation>io/netty/checkstyle.xml</configLocation>-->
+<!--              <sourceDirectories>-->
+<!--                <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>-->
+<!--                <sourceDirectory>${project.build.testSourceDirectory}</sourceDirectory>-->
+<!--              </sourceDirectories>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--        <dependencies>-->
+<!--          <dependency>-->
+<!--            <groupId>com.puppycrawl.tools</groupId>-->
+<!--            <artifactId>checkstyle</artifactId>-->
+<!--            <version>8.18</version>-->
+<!--          </dependency>-->
+<!--          <dependency>-->
+<!--            <groupId>${project.groupId}</groupId>-->
+<!--            <artifactId>netty-build</artifactId>-->
+<!--            <version>${netty.build.version}</version>-->
+<!--          </dependency>-->
+<!--        </dependencies>-->
+<!--      </plugin>-->
+<!--      <plugin>-->
+<!--        <groupId>org.codehaus.mojo</groupId>-->
+<!--        <artifactId>xml-maven-plugin</artifactId>-->
+<!--        <version>1.0.1</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>check-style</id>-->
+<!--            <goals>-->
+<!--              <goal>check-format</goal>-->
+<!--            </goals>-->
+<!--            <phase>validate</phase>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--        <configuration>-->
+<!--          <formatFileSets>-->
+<!--            <formatFileSet>-->
+<!--              <directory>${project.basedir}</directory>-->
+<!--              <includes>-->
+<!--                <include>**/pom.xml</include>-->
+<!--              </includes>-->
+<!--            </formatFileSet>-->
+<!--          </formatFileSets>-->
+<!--          <useDefaultFormatFileSet>false</useDefaultFormatFileSet>-->
+<!--        </configuration>-->
+<!--      </plugin>-->
       <!-- Download the npn-boot.jar in advance to add it to the boot classpath. -->
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -968,34 +969,34 @@
           </execution>
         </executions>
       </plugin>
-      <plugin>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <includes>
-            <include>**/*Test*.java</include>
-            <include>**/*Benchmark*.java</include>
-          </includes>
-          <excludes>
-            <exclude>**/Abstract*</exclude>
-            <exclude>**/*TestUtil*</exclude>
-          </excludes>
-          <runOrder>random</runOrder>
-          <systemPropertyVariables>
-            <logback.configurationFile>${logging.config}</logback.configurationFile>
-            <logLevel>${logging.logLevel}</logLevel>
-          </systemPropertyVariables>
-          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
-          <jvm>${testJvm}</jvm>
-           <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
-          <trimStackTrace>false</trimStackTrace>
-        </configuration>
-      </plugin>
+<!--      <plugin>-->
+<!--        <artifactId>maven-surefire-plugin</artifactId>-->
+<!--        <configuration>-->
+<!--          <includes>-->
+<!--            <include>**/*Test*.java</include>-->
+<!--            <include>**/*Benchmark*.java</include>-->
+<!--          </includes>-->
+<!--          <excludes>-->
+<!--            <exclude>**/Abstract*</exclude>-->
+<!--            <exclude>**/*TestUtil*</exclude>-->
+<!--          </excludes>-->
+<!--          <runOrder>random</runOrder>-->
+<!--          <systemPropertyVariables>-->
+<!--            <logback.configurationFile>${logging.config}</logback.configurationFile>-->
+<!--            <logLevel>${logging.logLevel}</logLevel>-->
+<!--          </systemPropertyVariables>-->
+<!--          <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.java9} ${argLine.javaProperties}</argLine>-->
+<!--          <properties>-->
+<!--            <property>-->
+<!--              <name>listener</name>-->
+<!--              <value>io.netty.build.junit.TimedOutTestsListener</value>-->
+<!--            </property>-->
+<!--          </properties>-->
+<!--          <jvm>${testJvm}</jvm>-->
+<!--           &lt;!&ndash; Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 &ndash;&gt;-->
+<!--          <trimStackTrace>false</trimStackTrace>-->
+<!--        </configuration>-->
+<!--      </plugin>-->
       <!-- always produce osgi bundles -->
       <plugin>
         <groupId>org.apache.felix</groupId>

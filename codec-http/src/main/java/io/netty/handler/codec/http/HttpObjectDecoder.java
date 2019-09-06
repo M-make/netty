@@ -190,24 +190,30 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         switch (currentState) {
         case SKIP_CONTROL_CHARS: {
+            // 如果返回false，则解析结束
             if (!skipControlCharacters(buffer)) {
                 return;
             }
+            // 设置状态为可以开始读取
             currentState = State.READ_INITIAL;
         }
         case READ_INITIAL: try {
+            // 解析 http request line
             AppendableCharSequence line = lineParser.parse(buffer);
             if (line == null) {
                 return;
             }
+            // 解析http request line 的 方法,URI,协议
             String[] initialLine = splitInitialLine(line);
+            // 如果解析的数据块，没有3个，那么丢弃这一块，继续解析下一行
             if (initialLine.length < 3) {
                 // Invalid initial line - ignore.
                 currentState = State.SKIP_CONTROL_CHARS;
                 return;
             }
-
+            // 拼装httpMessage
             message = createMessage(initialLine);
+            // 接下来，读取http header
             currentState = State.READ_HEADER;
             // fall-through
         } catch (Exception e) {
@@ -229,6 +235,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 resetNow();
                 return;
             case READ_CHUNK_SIZE:
+                // 如果不支持分块传输，则抛异常
                 if (!chunkedSupported) {
                     throw new IllegalArgumentException("Chunked messages not supported");
                 }
@@ -243,6 +250,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                  * server closing the connection. So we treat this as variable length chunked encoding.
                  */
                 long contentLength = contentLength();
+                // contentLength 长度为0 或者没有这个头信息并且是解码请求
                 if (contentLength == 0 || contentLength == -1 && isDecodingRequest()) {
                     out.add(message);
                     out.add(LastHttpContent.EMPTY_LAST_CONTENT);
@@ -255,6 +263,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
                 out.add(message);
 
+                // 如果是读取固定长度的
                 if (nextState == State.READ_FIXED_LENGTH_CONTENT) {
                     // chunkSize will be decreased as the READ_FIXED_LENGTH_CONTENT state reads data chunk by chunk.
                     chunkSize = contentLength;
@@ -549,26 +558,45 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return chunk;
     }
 
+    /**
+     *  将 ByteBuf 指向，正确的字节处
+     *
+     * @return  为false的情况:
+     *      1: 没有可读的字节
+     *      2: 缓存区可读的字节都是空行或者转义符
+     */
     private static boolean skipControlCharacters(ByteBuf buffer) {
         boolean skiped = false;
+        // 写坐标
         final int wIdx = buffer.writerIndex();
+        // 读坐标
         int rIdx = buffer.readerIndex();
+        // 如果写坐标大于读坐标，则读取下一字节，判
+        // 断是否是转义字符和空字符，如果是，则一直
+        // 往下读，直到不是转义和空字符，将读指针设
+        // 置到最后读到的地方
         while (wIdx > rIdx) {
+            // 读取无符号字节
             int c = buffer.getUnsignedByte(rIdx++);
+            // 如果不是 iso转义字符和空字符
             if (!Character.isISOControl(c) && !Character.isWhitespace(c)) {
                 rIdx--;
+                // 跳过
                 skiped = true;
                 break;
             }
         }
+        // 设置读索引
         buffer.readerIndex(rIdx);
         return skiped;
     }
 
     private State readHeaders(ByteBuf buffer) {
+        // 获取之前已经保存好的httpMessage对象，也就是httpRequest
         final HttpMessage message = this.message;
+        // 取header
         final HttpHeaders headers = message.headers();
-
+        // 解析一行
         AppendableCharSequence line = headerParser.parse(buffer);
         if (line == null) {
             return null;
@@ -576,19 +604,23 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         if (line.length() > 0) {
             do {
                 char firstChar = line.charAtUnsafe(0);
+                // 第一次为空，第二次name就被赋值了，如果是标准的报文，这个if块是不会进的
                 if (name != null && (firstChar == ' ' || firstChar == '\t')) {
                     //please do not make one line from below code
                     //as it breaks +XX:OptimizeStringConcat optimization
+                    // 如果一行的数据中，解析的第一个字符是 ' ' 或者 '\t' 那么说明这行，也是上一行的value
                     String trimmedLine = line.toString().trim();
                     String valueStr = String.valueOf(value);
+                    // 上一行的value = value + ' ' + 这一行的数据
                     value = valueStr + ' ' + trimmedLine;
                 } else {
                     if (name != null) {
                         headers.add(name, value);
                     }
+                    // 分割 http header 并且赋值name和value
                     splitHeader(line);
                 }
-
+                // 解析一行
                 line = headerParser.parse(buffer);
                 if (line == null) {
                     return null;
@@ -606,14 +638,17 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         State nextState;
 
+        // 此处返回false
         if (isContentAlwaysEmpty(message)) {
             HttpUtil.setTransferEncodingChunked(message, false);
             nextState = State.SKIP_CONTROL_CHARS;
-        } else if (HttpUtil.isTransferEncodingChunked(message)) {
+        } else if (/*客户端是否是分块传输*/HttpUtil.isTransferEncodingChunked(message)) {
             nextState = State.READ_CHUNK_SIZE;
         } else if (contentLength() >= 0) {
+            // 如果含有content-length属性，那么只需要读取固定长度的数据
             nextState = State.READ_FIXED_LENGTH_CONTENT;
         } else {
+            // 否则读取可变长度的数据
             nextState = State.READ_VARIABLE_LENGTH_CONTENT;
         }
         return nextState;
@@ -694,6 +729,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return Integer.parseInt(hex, 16);
     }
 
+    /**
+     *  这里截取 http request line 的请求方法，请求URI，请求的http协议版本
+     */
     private static String[] splitInitialLine(AppendableCharSequence sb) {
         int aStart;
         int aEnd;
@@ -702,8 +740,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int cStart;
         int cEnd;
 
+        // 找到不是空白符的第一个字符下标
         aStart = findNonWhitespace(sb, 0);
+        // 找到空白字符的下标
         aEnd = findWhitespace(sb, aStart);
+
 
         bStart = findNonWhitespace(sb, aEnd);
         bEnd = findWhitespace(sb, bStart);
@@ -725,7 +766,10 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         int valueStart;
         int valueEnd;
 
+        // 从0开始找非空白的下标 一般返回0
         nameStart = findNonWhitespace(sb, 0);
+
+        // 获取找到 ':' 或者 空白符的下标
         for (nameEnd = nameStart; nameEnd < length; nameEnd ++) {
             char ch = sb.charAtUnsafe(nameEnd);
             if (ch == ':' || Character.isWhitespace(ch)) {
@@ -733,6 +777,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
 
+        // colonEnd = ':'下标 + 1
         for (colonEnd = nameEnd; colonEnd < length; colonEnd ++) {
             if (sb.charAtUnsafe(colonEnd) == ':') {
                 colonEnd ++;
@@ -740,16 +785,23 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             }
         }
 
+        // 获取 httpHeaderName
         name = sb.subStringUnsafe(nameStart, nameEnd);
+
+        // 从 ':'+1的下标处开始寻找不是空白符号的下标
         valueStart = findNonWhitespace(sb, colonEnd);
         if (valueStart == length) {
             value = EMPTY_VALUE;
         } else {
             valueEnd = findEndOfString(sb);
+            // httpHeaderValues  比如 Content-type: application/json;*/*  这里就是 application/json;*/*
             value = sb.subStringUnsafe(valueStart, valueEnd);
         }
     }
 
+    /**
+     * 找到不是空白符的第一个字符下标
+     */
     private static int findNonWhitespace(AppendableCharSequence sb, int offset) {
         for (int result = offset; result < sb.length(); ++result) {
             if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
@@ -759,6 +811,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return sb.length();
     }
 
+    /**
+     *  找到空白符的下标
+     */
     private static int findWhitespace(AppendableCharSequence sb, int offset) {
         for (int result = offset; result < sb.length(); ++result) {
             if (Character.isWhitespace(sb.charAtUnsafe(result))) {
@@ -768,6 +823,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         return sb.length();
     }
 
+    /**
+     *  从对象的最后一个下标处，向前找不是空白符的下标，加上1返回
+     * @param sb
+     * @return
+     */
     private static int findEndOfString(AppendableCharSequence sb) {
         for (int result = sb.length() - 1; result > 0; --result) {
             if (!Character.isWhitespace(sb.charAtUnsafe(result))) {
@@ -790,11 +850,14 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         public AppendableCharSequence parse(ByteBuf buffer) {
             final int oldSize = size;
             seq.reset();
+            // 读取每个字节，每个字节用 this 处理
+            // 如果读到结尾不是'\n'或者发生异常，则返回-1
             int i = buffer.forEachByte(this);
             if (i == -1) {
                 size = oldSize;
                 return null;
             }
+            // i的数字已经是读过的，所以需要设置为i+1
             buffer.readerIndex(i + 1);
             return seq;
         }
@@ -803,6 +866,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             size = 0;
         }
 
+        /**
+         *  http 报文由  回车+换行结束
+         */
         @Override
         public boolean process(byte value) throws Exception {
             char nextByte = (char) (value & 0xFF);
@@ -813,6 +879,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 return false;
             }
 
+            // 如果内容的数据量，大于设置的最大长度，则抛异常
             if (++ size > maxLength) {
                 // TODO: Respond with Bad Request and discard the traffic
                 //    or close the connection.
@@ -820,7 +887,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 //       If decoding a response, just throw an exception.
                 throw newException(maxLength);
             }
-
+            // 追加内容
             seq.append(nextByte);
             return true;
         }
