@@ -61,12 +61,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final int ST_SHUTDOWN = 4;
     private static final int ST_TERMINATED = 5;
 
-    private static final Runnable WAKEUP_TASK = new Runnable() {
-        @Override
-        public void run() {
-            // Do nothing.
-        }
-    };
     private static final Runnable NOOP_TASK = new Runnable() {
         @Override
         public void run() {
@@ -176,33 +170,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         this.executor = ThreadExecutorMap.apply(executor, this);
         this.taskQueue = ObjectUtil.checkNotNull(taskQueue, "taskQueue");
         rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
-    }
-
-    /**
-     * Called from arbitrary non-{@link EventExecutor} threads prior to scheduled task submission.
-     * Returns {@code true} if the {@link EventExecutor} thread should be woken immediately to
-     * process the scheduled task (if not already awake).
-     * <p>
-     * If {@code false} is returned, {@link #afterScheduledTaskSubmitted(long)} will be called with
-     * the same value <i>after</i> the scheduled task is enqueued, providing another opportunity
-     * to wake the {@link EventExecutor} thread if required.
-     *
-     * @param deadlineNanos deadline of the to-be-scheduled task
-     *     relative to {@link AbstractScheduledEventExecutor#nanoTime()}
-     * @return {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
-     */
-    protected boolean beforeScheduledTaskSubmitted(long deadlineNanos) {
-        return true;
-    }
-
-    /**
-     * See {@link #beforeScheduledTaskSubmitted(long)}. Called only after that method returns false.
-     *
-     * @param deadlineNanos relative to {@link AbstractScheduledEventExecutor#nanoTime()}
-     * @return  {@code true} if the {@link EventExecutor} thread should be woken, {@code false} otherwise
-     */
-    protected boolean afterScheduledTaskSubmitted(long deadlineNanos) {
-        return true;
     }
 
     /**
@@ -587,29 +554,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     protected void wakeup(boolean inEventLoop) {
-        if (!inEventLoop || state == ST_SHUTTING_DOWN) {
+        if (!inEventLoop) {
             // Use offer as we actually only need this to unblock the thread and if offer fails we do not care as there
             // is already something in the queue.
             taskQueue.offer(WAKEUP_TASK);
-        }
-    }
-
-    @Override
-    final void executeScheduledRunnable(final Runnable runnable, boolean isAddition, long deadlineNanos) {
-        // Don't wakeup if this is a removal task or if beforeScheduledTaskSubmitted returns false
-        if (isAddition && beforeScheduledTaskSubmitted(deadlineNanos)) {
-            super.executeScheduledRunnable(runnable, isAddition, deadlineNanos);
-        } else {
-            super.executeScheduledRunnable(new NonWakeupRunnable() {
-                @Override
-                public void run() {
-                    runnable.run();
-                }
-            }, isAddition, deadlineNanos);
-            // Second hook after scheduling to facilitate race-avoidance
-            if (isAddition && afterScheduledTaskSubmitted(deadlineNanos)) {
-                wakeup(false);
-            }
         }
     }
 
@@ -726,7 +674,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         if (wakeup) {
-            wakeup(inEventLoop);
+            taskQueue.offer(WAKEUP_TASK);
+            if (!addTaskWakesUp) {
+                wakeup(inEventLoop);
+            }
         }
 
         return terminationFuture();
@@ -778,7 +729,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         if (wakeup) {
-            wakeup(inEventLoop);
+            taskQueue.offer(WAKEUP_TASK);
+            if (!addTaskWakesUp) {
+                wakeup(inEventLoop);
+            }
         }
     }
 
@@ -827,7 +781,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if (gracefulShutdownQuietPeriod == 0) {
                 return true;
             }
-            wakeup(true);
+            taskQueue.offer(WAKEUP_TASK);
             return false;
         }
 
@@ -840,7 +794,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         if (nanoTime - lastExecutionTime <= gracefulShutdownQuietPeriod) {
             // Check if any tasks were added to the queue every 100ms.
             // TODO: Change the behavior of takeTask() so that it returns on timeout.
-            wakeup(true);
+            taskQueue.offer(WAKEUP_TASK);
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -872,10 +826,16 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     @Override
     public void execute(Runnable task) {
-        if (task == null) {
-            throw new NullPointerException("task");
-        }
+        ObjectUtil.checkNotNull(task, "task");
+        execute(task, !(task instanceof LazyRunnable) && wakesUpForTask(task));
+    }
 
+    @Override
+    public void lazyExecute(Runnable task) {
+        execute(ObjectUtil.checkNotNull(task, "task"), false);
+    }
+
+    private void execute(Runnable task, boolean immediate) {
         boolean inEventLoop = inEventLoop();
         addTask(task);
         if (!inEventLoop) {
@@ -897,7 +857,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             }
         }
 
-        if (!addTaskWakesUp && wakesUpForTask(task)) {
+        if (!addTaskWakesUp && immediate) {
             wakeup(inEventLoop);
         }
     }
@@ -961,20 +921,17 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Marker interface for {@link Runnable} to indicate that it should be queued for execution
-     * but does not need to run immediately. The default implementation of
-     * {@link SingleThreadEventExecutor#wakesUpForTask(Runnable)} uses this to avoid waking up
-     * the {@link EventExecutor} thread when not necessary.
+     * @deprecated use {@link AbstractEventExecutor.LazyRunnable}
      */
-    protected interface NonWakeupRunnable extends Runnable { }
+    @Deprecated
+    protected interface NonWakeupRunnable extends LazyRunnable { }
 
     /**
      * Can be overridden to control which tasks require waking the {@link EventExecutor} thread
-     * if it is waiting so that they can be run immediately. The default implementation
-     * decides based on whether the task implements {@link NonWakeupRunnable}.
+     * if it is waiting so that they can be run immediately.
      */
     protected boolean wakesUpForTask(Runnable task) {
-        return !(task instanceof NonWakeupRunnable);
+        return true;
     }
 
     protected static void reject() {
