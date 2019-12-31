@@ -15,18 +15,7 @@
  */
 package io.netty.bootstrap;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
+import io.netty.channel.*;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -123,8 +112,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) {
-        setChannelOptions(channel, options0().entrySet().toArray(newOptionArray(0)), logger);
-        setAttributes(channel, attrs0().entrySet().toArray(newAttrArray(0)));
+        // 设置channel的设置
+        setChannelOptions(channel, /*父类的配置，boss线程的配置*/options0().entrySet().toArray(newOptionArray(0)), logger);
+        setAttributes(channel,/*父类的属性*/ attrs0().entrySet().toArray(newAttrArray(0)));
 
         ChannelPipeline p = channel.pipeline();
 
