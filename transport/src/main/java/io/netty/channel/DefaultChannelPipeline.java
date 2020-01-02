@@ -28,14 +28,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.WeakHashMap;
+import java.util.*;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -91,10 +84,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        // 成功的future
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise =  new VoidChannelPromise(channel, true);
 
+        // 管道最尾部的处理，全是空实现
         tail = new TailContext(this);
+        //
         head = new HeadContext(this);
 
         head.next = tail;
@@ -199,10 +195,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
+            // 检查非共享的handler是否被重复添加
             checkMultiplicity(handler);
 
-            newCtx = newContext(group, filterName(name, handler), handler);
+            newCtx = newContext(group, filterName(name, handler)/*根据handler生成name*/, handler);
 
+            // 添加于尾之前
             addLast0(newCtx);
 
             // If the registered is false it means that the channel was not registered on an eventLoop yet.
@@ -224,6 +222,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
+    /**
+     *  添加于尾之前
+     */
     private void addLast0(AbstractChannelHandlerContext newCtx) {
         AbstractChannelHandlerContext prev = tail.prev;
         newCtx.prev = prev;
@@ -1331,6 +1332,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            // 绑定端口
             unsafe.bind(localAddress, promise);
         }
 
