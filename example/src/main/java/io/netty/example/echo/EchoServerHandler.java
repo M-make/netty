@@ -19,15 +19,34 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Handler implementation for the echo server.
  */
 @Sharable
 public class EchoServerHandler extends ChannelInboundHandlerAdapter {
 
+
+    private ExecutorService executorService = Executors.newFixedThreadPool(3);
+
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ctx.write(msg);
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    TimeUnit.SECONDS.sleep(3L);
+                    ctx.writeAndFlush(msg);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    System.out.println(e);
+                }
+            }
+        });
+        System.out.println(msg);
     }
 
     @Override
