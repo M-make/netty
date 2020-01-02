@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 /**
  * Default {@link AttributeMap} implementation which use simple synchronization per bucket to keep the memory overhead
  * as low as possible.
+ *   数据结构： 数组+链表的方式
+ *   根据AttributeKey.id为数组下标，下标相同，再根据key，循环链表查找
  */
 public class DefaultAttributeMap implements AttributeMap {
 
@@ -46,14 +48,15 @@ public class DefaultAttributeMap implements AttributeMap {
         if (attributes == null) {
             // Not using ConcurrentHashMap due to high memory consumption.
             attributes = new AtomicReferenceArray<DefaultAttribute<?>>(BUCKET_SIZE);
-
+            // 并发设置
             if (!updater.compareAndSet(this, null, attributes)) {
                 attributes = this.attributes;
             }
         }
-
+        // key对应的index
         int i = index(key);
         DefaultAttribute<?> head = attributes.get(i);
+        // 找到指定下标的
         if (head == null) {
             // No head exists yet which means we may be able to add the attribute without synchronization and just
             // use compare and set. At worst we need to fallback to synchronization and waste two allocations.
