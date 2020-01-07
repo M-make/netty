@@ -134,6 +134,7 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
             } finally {
                 ChannelPipeline pipeline = ctx.pipeline();
                 if (pipeline.context(this) != null) {
+                    // 删除自己
                     pipeline.remove(this);
                 }
             }

@@ -38,6 +38,7 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
             @Override
             public void run() {
                 try {
+                    System.out.println("" + "----"+ ctx.channel().attr(EchoServer.TEST_KEY).get());
                     TimeUnit.SECONDS.sleep(3L);
                     ctx.writeAndFlush(msg);
                 } catch (InterruptedException e) {

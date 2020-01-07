@@ -25,6 +25,9 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.AttributeKey;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Echoes back any received data from a client.
@@ -33,6 +36,8 @@ public final class EchoServer {
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
+
+    public static final AttributeKey<String> TEST_KEY = AttributeKey.valueOf("Test");
 
     public static void main(String[] args) throws Exception {
         // Configure SSL.
@@ -44,14 +49,26 @@ public final class EchoServer {
             sslCtx = null;
         }
 
+        AtomicInteger id = new AtomicInteger(1);
+
         // Configure the server.
-        EventLoopGroup bossGroup = new NioEventLoopGroup(2);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup bossGroup = new NioEventLoopGroup(1,(runnable)->{
+            Thread thread = new Thread(runnable);
+            thread.setName(String.format("boss-thread-%s",id.getAndIncrement()));
+            return thread;
+        });
+        EventLoopGroup workerGroup = new NioEventLoopGroup(4,(runnable)->{
+            Thread thread = new Thread(runnable);
+            thread.setName(String.format("worker-thread-%s",id.getAndIncrement()));
+            return thread;
+        });
         final EchoServerHandler serverHandler = new EchoServerHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();
+
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
+             .childAttr(TEST_KEY,"Just Test")
              .option(ChannelOption.SO_BACKLOG, 100)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -67,11 +84,11 @@ public final class EchoServer {
              });
 
             // Start the server.
-            ChannelFuture f = b.bind(PORT).sync();
+//            ChannelFuture f = b.bind(PORT).sync();
             ChannelFuture f1 = b.bind(8903).sync();
 
             // Wait until the server socket is closed.
-            f.channel().closeFuture().sync();
+//            f.channel().closeFuture().sync();
             f1.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
