@@ -536,12 +536,14 @@ public final class NioEventLoop extends SingleThreadEventLoop {
             }
             return true;
         }
+        // selectCnt大于阈值
         if (SELECTOR_AUTO_REBUILD_THRESHOLD > 0 &&
                 selectCnt >= SELECTOR_AUTO_REBUILD_THRESHOLD) {
             // The selector returned prematurely many times in a row.
             // Rebuild the selector to work around the problem.
             logger.warn("Selector.select() returned prematurely {} times in a row; rebuilding Selector {}.",
                     selectCnt, selector);
+            // 重组selector
             rebuildSelector();
             return true;
         }
@@ -655,6 +657,11 @@ public final class NioEventLoop extends SingleThreadEventLoop {
         }
     }
 
+    /**
+     *
+     * @param k key
+     * @param ch 这个是serverSocketChannel
+     */
     private void processSelectedKey(SelectionKey k, AbstractNioChannel ch) {
         final AbstractNioChannel.NioUnsafe unsafe = ch.unsafe();
         if (!k.isValid()) {
@@ -686,6 +693,7 @@ public final class NioEventLoop extends SingleThreadEventLoop {
                 // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                 // See https://github.com/netty/netty/issues/924
                 int ops = k.interestOps();
+                // 移除connect事件
                 ops &= ~SelectionKey.OP_CONNECT;
                 k.interestOps(ops);
 
