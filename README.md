@@ -3,3 +3,8 @@
 
 # License
 [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0.html)
+
+
+# ERROR
+mac os build source
+https://github.com/netty/netty/issues/7748 
