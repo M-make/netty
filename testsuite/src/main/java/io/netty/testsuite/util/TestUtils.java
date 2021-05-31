@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -23,7 +23,6 @@ import org.junit.rules.TestName;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
 
-import javax.management.MBeanServer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -39,6 +38,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+import javax.management.MBeanServer;
 
 public final class TestUtils {
 
@@ -73,7 +73,7 @@ public final class TestUtils {
      *
      */
     public static boolean isSctpSupported() {
-        String os = System.getProperty("os.name").toLowerCase(Locale.UK);
+        String os = System.getProperty("os.name").toLowerCase(Locale.US);
         if ("unix".equals(os) || "linux".equals(os) || "sun".equals(os) || "solaris".equals(os)) {
             try {
                 // Try to open a SCTP Channel, by using reflection to make it compile also on

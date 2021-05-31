@@ -5,7 +5,7 @@
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at:
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
@@ -78,6 +78,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -309,7 +310,7 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("BAD_PREFACE", UTF_8));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+        verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
     }
@@ -320,7 +321,7 @@ public class Http2ConnectionHandlerTest {
         handler = newHandler();
         handler.channelRead(ctx, copiedBuffer("GET /path HTTP/1.1", US_ASCII));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+        verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
             captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
         assertTrue(goAwayDebugCap.contains("/path"));
@@ -336,7 +337,7 @@ public class Http2ConnectionHandlerTest {
         ByteBuf buf = Unpooled.buffer().writeBytes(connectionPrefaceBuf()).writeZero(10);
         handler.channelRead(ctx, buf);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter, atLeastOnce()).writeGoAway(eq(ctx), eq(0), eq(PROTOCOL_ERROR.code()),
+        verify(frameWriter, atLeastOnce()).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         assertEquals(0, captor.getValue().refCnt());
     }
@@ -384,10 +385,13 @@ public class Http2ConnectionHandlerTest {
     public void connectionErrorShouldStartShutdown() throws Exception {
         handler = newHandler();
         Http2Exception e = new Http2Exception(PROTOCOL_ERROR);
+        // There's no guarantee that lastStreamCreated in correct, as the error could have occurred during header
+        // processing before it was updated. Thus, it should _not_ be used for the GOAWAY.
+        // https://github.com/netty/netty/issues/10670
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
         handler.exceptionCaught(ctx, e);
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(frameWriter).writeGoAway(eq(ctx), eq(STREAM_ID), eq(PROTOCOL_ERROR.code()),
+        verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
                 captor.capture(), eq(promise));
         captor.getValue().release();
     }
@@ -689,6 +693,14 @@ public class Http2ConnectionHandlerTest {
     }
 
     @Test
+    public void canCloseStreamWithVoidPromise() throws Exception {
+        handler = newHandler();
+        handler.closeStream(stream, ctx.voidPromise());
+        verify(stream, times(1)).close();
+        verifyNoMoreInteractions(stream);
+    }
+
+    @Test
     public void channelReadCompleteTriggersFlush() throws Exception {
         handler = newHandler();
         handler.channelReadComplete(ctx);
@@ -713,6 +725,16 @@ public class Http2ConnectionHandlerTest {
                                                  any(ByteBuf.class), any(ChannelPromise.class));
         verify(frameWriter, never()).writeRstStream(any(ChannelHandlerContext.class), anyInt(), anyLong(),
                                                     any(ChannelPromise.class));
+    }
+
+    @Test
+    public void clientChannelClosedDoesNotSendGoAwayBeforePreface() throws Exception {
+        when(connection.isServer()).thenReturn(false);
+        when(channel.isActive()).thenReturn(false);
+        handler = newHandler();
+        when(channel.isActive()).thenReturn(true);
+        handler.close(ctx, promise);
+        verifyZeroInteractions(frameWriter);
     }
 
     @Test

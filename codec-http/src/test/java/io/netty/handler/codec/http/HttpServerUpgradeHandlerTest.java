@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -139,6 +139,50 @@ public class HttpServerUpgradeHandlerTest {
             "upgrade: nextprotocol\r\n\r\n";
         assertEquals(expectedHttpResponse, upgradeMessage.toString(CharsetUtil.US_ASCII));
         assertTrue(upgradeMessage.release());
+        assertFalse(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void skippedUpgrade() {
+        final HttpServerCodec httpServerCodec = new HttpServerCodec();
+        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                fail("Should never be invoked");
+                return null;
+            }
+        };
+
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory) {
+            @Override
+            protected boolean shouldHandleUpgradeRequest(HttpRequest req) {
+                return !req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false);
+            }
+        };
+
+        EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
+
+        String upgradeString = "GET / HTTP/1.1\r\n" +
+                               "Host: example.com\r\n" +
+                               "Connection: Upgrade\r\n" +
+                               "Upgrade: do-not-upgrade\r\n\r\n";
+        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+
+        // The upgrade request should not be passed to the next handler without any processing.
+        assertTrue(channel.writeInbound(upgrade));
+        assertNotNull(channel.pipeline().get(HttpServerCodec.class));
+        assertNull(channel.pipeline().get("marker"));
+
+        HttpRequest req = channel.readInbound();
+        assertFalse(req instanceof FullHttpRequest); // Should not be aggregated.
+        assertTrue(req.headers().contains(HttpHeaderNames.CONNECTION, "Upgrade", false));
+        assertTrue(req.headers().contains(HttpHeaderNames.UPGRADE, "do-not-upgrade", false));
+        assertTrue(channel.readInbound() instanceof LastHttpContent);
+        assertNull(channel.readInbound());
+
+        // No response should be written because we're just passing through.
+        channel.flushOutbound();
+        assertNull(channel.readOutbound());
         assertFalse(channel.finishAndReleaseAll());
     }
 }

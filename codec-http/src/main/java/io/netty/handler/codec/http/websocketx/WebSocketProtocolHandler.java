@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -112,11 +112,15 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());
         } else if (msg instanceof CloseWebSocketFrame) {
-            closeSent = promise.unvoid();
+            closeSent(promise.unvoid());
             ctx.write(msg).addListener(new ChannelPromiseNotifier(false, closeSent));
         } else {
             ctx.write(msg, promise);
         }
+    }
+
+    void closeSent(ChannelPromise promise) {
+        closeSent = promise;
     }
 
     private void applyCloseSentTimeout(ChannelHandlerContext ctx) {
@@ -128,7 +132,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             @Override
             public void run() {
                 if (!closeSent.isDone()) {
-                    closeSent.tryFailure(new WebSocketHandshakeException("send close frame timed out"));
+                    closeSent.tryFailure(buildHandshakeException("send close frame timed out"));
                 }
             }
         }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -139,6 +143,14 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
                 timeoutTask.cancel(false);
             }
         });
+    }
+
+    /**
+     * Returns a {@link WebSocketHandshakeException} that depends on which client or server pipeline
+     * this handler belongs. Should be overridden in implementation otherwise a default exception is used.
+     */
+    protected WebSocketHandshakeException buildHandshakeException(String message) {
+        return new WebSocketHandshakeException(message);
     }
 
     @Override

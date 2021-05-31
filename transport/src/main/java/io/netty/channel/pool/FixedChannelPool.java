@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -14,6 +14,8 @@
  * under the License.
  */
 package io.netty.channel.pool;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -173,12 +175,8 @@ public class FixedChannelPool extends SimpleChannelPool {
                             int maxConnections, int maxPendingAcquires,
                             boolean releaseHealthCheck, boolean lastRecentUsed) {
         super(bootstrap, handler, healthCheck, releaseHealthCheck, lastRecentUsed);
-        if (maxConnections < 1) {
-            throw new IllegalArgumentException("maxConnections: " + maxConnections + " (expected: >= 1)");
-        }
-        if (maxPendingAcquires < 1) {
-            throw new IllegalArgumentException("maxPendingAcquires: " + maxPendingAcquires + " (expected: >= 1)");
-        }
+        checkPositive(maxConnections, "maxConnections");
+        checkPositive(maxPendingAcquires, "maxPendingAcquires");
         if (action == null && acquireTimeoutMillis == -1) {
             timeoutTask = null;
             acquireTimeoutNanos = -1;
@@ -194,13 +192,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                     @Override
                     public void onTimeout(AcquireTask task) {
                         // Fail the promise as we timed out.
-                        task.promise.setFailure(new TimeoutException(
-                                "Acquire operation took longer then configured maximum time") {
-                            @Override
-                            public Throwable fillInStackTrace() {
-                                return this;
-                            }
-                        });
+                        task.promise.setFailure(new AcquireTimeoutException());
                     }
                 };
                 break;
@@ -511,5 +503,18 @@ public class FixedChannelPool extends SimpleChannelPool {
         }
 
         return GlobalEventExecutor.INSTANCE.newSucceededFuture(null);
+    }
+
+    private static final class AcquireTimeoutException extends TimeoutException {
+
+        private AcquireTimeoutException() {
+            super("Acquire operation took longer then configured maximum time");
+        }
+
+        // Suppress a warning since the method doesn't need synchronization
+        @Override
+        public Throwable fillInStackTrace() {   // lgtm[java/non-sync-override]
+            return this;
+        }
     }
 }

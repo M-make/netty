@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -22,6 +22,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSessionContext;
 
 import java.security.Provider;
 import java.util.ArrayList;
@@ -57,7 +58,7 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
 
     @BeforeClass
     public static void checkOpenssl() {
-        assumeTrue(OpenSsl.isAvailable());
+        OpenSsl.ensureAvailability();
     }
 
     @Override
@@ -151,14 +152,51 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
     }
 
     @Override
+    public void testSessionLocalWhenNonMutualWithoutKeyManager() throws Exception {
+        // This only really works when the KeyManagerFactory is supported as otherwise we not really know when
+        // we need to provide a cert.
+        assumeTrue(OpenSsl.supportsKeyManagerFactory());
+        super.testSessionLocalWhenNonMutualWithoutKeyManager();
+    }
+
+    @Override
+    protected void invalidateSessionsAndAssert(SSLSessionContext context) {
+        // Not supported by conscrypt
+    }
+
+    @Override
+    @Test
+    public void testSessionCache() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCache();
+    }
+
+    @Override
+    @Test
+    public void testSessionCacheTimeout() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCacheTimeout();
+    }
+
+    @Override
+    @Test
+    public void testSessionCacheSize() throws Exception {
+        assumeTrue(OpenSsl.isSessionCacheSupported());
+        super.testSessionCacheSize();
+    }
+
+    @Override
     protected SSLEngine wrapEngine(SSLEngine engine) {
         return Java8SslTestUtils.wrapSSLEngineForTesting(engine);
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     protected SslContext wrapContext(SslContext context) {
         if (context instanceof OpenSslContext) {
             ((OpenSslContext) context).setUseTasks(useTasks);
+            // Explicit enable the session cache as its disabled by default on the client side.
+            ((OpenSslContext) context).sessionContext().setSessionCacheEnabled(true);
         }
         return context;
     }

@@ -5,7 +5,7 @@
  * version 2.0 (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
@@ -411,7 +411,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         if (cumulation != null) {
             callDecode(ctx, cumulation, out);
-            decodeLast(ctx, cumulation, out);
+            // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
+            // be unexpected.
+            if (!ctx.isRemoved()) {
+                // Use Unpooled.EMPTY_BUFFER if cumulation become null after calling callDecode(...).
+                // See https://github.com/netty/netty/issues/10802.
+                ByteBuf buffer = cumulation == null ? Unpooled.EMPTY_BUFFER : cumulation;
+                decodeLast(ctx, buffer, out);
+            }
         } else {
             decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
         }
@@ -429,7 +436,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         try {
             // 可读
             while (in.isReadable()) {
-                int outSize = out.size();
+                final int outSize = out.size();
 
                 if (outSize > 0) {
                     fireChannelRead(ctx, out, outSize);
@@ -443,7 +450,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     if (ctx.isRemoved()) {
                         break;
                     }
-                    outSize = 0;
                 }
 
                 int oldInputLength = in.readableBytes();
@@ -458,7 +464,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                     break;
                 }
 
-                if (outSize == out.size()) {
+                if (out.isEmpty()) {
                     if (oldInputLength == in.readableBytes()) {
                         break;
                     } else {
