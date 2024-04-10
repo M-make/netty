@@ -1603,6 +1603,8 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * This method behaves similarly to {@code readSlice(...).retain()} except that this method may return
      * a buffer implementation that produces less garbage.
      *
+     *  返回readIndex到指定长度的数据
+     *
      * @param length the size of the new slice
      *
      * @return the newly created slice

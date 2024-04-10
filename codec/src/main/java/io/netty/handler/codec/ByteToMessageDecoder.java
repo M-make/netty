@@ -77,6 +77,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
+     * 追加器，使用内存copy的方式
      */
     public static final Cumulator MERGE_CUMULATOR = new Cumulator() {
         @Override
@@ -94,8 +95,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             try {
                 final int required = in.readableBytes();
                 if (required > cumulation.maxWritableBytes() ||
-                    required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1 ||
-                    cumulation.isReadOnly()) {
+                        required > cumulation.maxFastWritableBytes() && cumulation.refCnt() > 1 ||
+                        cumulation.isReadOnly()) {
                     // Expand cumulation (by replacing it) under the following conditions:
                     // - cumulation cannot be resized to accommodate the additional data
                     // - cumulation can be expanded with a reallocation operation to accommodate but the buffer is
@@ -163,6 +164,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
     ByteBuf cumulation;
+    // 默认的数据积累器
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
     private boolean first;
@@ -544,12 +546,15 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
      * {@link #channelInactive(ChannelHandlerContext)} was triggered.
      *
      * By default, this will just call {@link #decode(ChannelHandlerContext, ByteBuf, List)} but sub-classes may
+     *
+     * 追加器，使用内存copy的方式
      * override this for some special cleanup operation.
      */
     protected void decodeLast(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (in.isReadable()) {
             // Only call decode() if there is something left in the buffer to decode.
             // See https://github.com/netty/netty/issues/4386
+            // 子类解码
             decodeRemovalReentryProtection(ctx, in, out);
         }
     }
@@ -563,8 +568,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         try {
             // This avoids redundant checks and stack depth compared to calling writeBytes(...)
             newCumulation.setBytes(0, oldCumulation, oldCumulation.readerIndex(), oldBytes)
-                .setBytes(oldBytes, in, in.readerIndex(), newBytes)
-                .writerIndex(totalBytes);
+                    .setBytes(oldBytes, in, in.readerIndex(), newBytes)
+                    .writerIndex(totalBytes);
             in.readerIndex(in.writerIndex());
             toRelease = oldCumulation;
             return newCumulation;

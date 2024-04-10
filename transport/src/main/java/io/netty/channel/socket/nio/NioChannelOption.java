@@ -58,6 +58,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
     @SuppressJava6Requirement(reason = "Usage guarded by java version check")
     static <T> boolean setOption(Channel jdkChannel, NioChannelOption<T> option, T value) {
         java.nio.channels.NetworkChannel channel = (java.nio.channels.NetworkChannel) jdkChannel;
+        // 如果含有不支持的设置
         if (!channel.supportedOptions().contains(option.option)) {
             return false;
         }
@@ -67,6 +68,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
             return false;
         }
         try {
+            // 设置配置
             channel.setOption(option.option, value);
             return true;
         } catch (IOException e) {

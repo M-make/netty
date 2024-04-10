@@ -15,11 +15,7 @@
  */
 package io.netty.util.concurrent;
 
-import io.netty.util.internal.InternalThreadLocalMap;
-import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.SystemPropertyUtil;
-import io.netty.util.internal.ThrowableUtil;
+import io.netty.util.internal.*;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -120,10 +116,12 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public boolean setUncancellable() {
+        // 设置 "不可取消的flag" 成功
         if (RESULT_UPDATER.compareAndSet(this, null, UNCANCELLABLE)) {
             return true;
         }
         Object result = this.result;
+        // 没有结束或者没有取消
         return !isDone0(result) || !isCancelled0(result);
     }
 
@@ -846,6 +844,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return result instanceof CauseHolder && ((CauseHolder) result).cause instanceof CancellationException;
     }
 
+    // result有值并且不是"不可取消"
     private static boolean isDone0(Object result) {
         return result != null && result != UNCANCELLABLE;
     }

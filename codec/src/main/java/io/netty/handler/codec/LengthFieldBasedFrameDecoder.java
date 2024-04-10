@@ -25,6 +25,12 @@ import java.util.List;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
+import java.nio.ByteOrder;
+import java.util.List;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 /**
  * A decoder that splits the received {@link ByteBuf}s dynamically by the
  * value of the length field in the message.  It is particularly useful when you
@@ -224,13 +230,15 @@ public class LengthFieldBasedFrameDecoder extends ByteToMessageDecoder {
      *        the maximum length of the frame.  If the length of the frame is
      *        greater than this value, {@link TooLongFrameException} will be
      *        thrown.
-     * @param lengthFieldOffset
+     * @param lengthFieldOffset  长度的偏移量
      *        the offset of the length field
-     * @param lengthFieldLength
+     * @param lengthFieldLength  长度的字节数
      *        the length of the length field
-     * @param lengthAdjustment
+     * @param lengthAdjustment   长度和正文之间的数据的长度
+     *                           长度       正文
+     *                           0x1c 0x01 "ABC"  如果这个值为1，那么正文长度就会从"ABC"开始算，忽略掉0x01
      *        the compensation value to add to the value of the length field
-     * @param initialBytesToStrip
+     * @param initialBytesToStrip 解出的字节从第几个字节开始算
      *        the number of first bytes to strip out from the decoded frame
      */
     public LengthFieldBasedFrameDecoder(

@@ -143,6 +143,9 @@ public interface ByteProcessor {
     /**
      * @return {@code true} if the processor wants to continue the loop and handle the next byte in the buffer.
      *         {@code false} if the processor wants to stop handling bytes and abort the loop.
+     *
+     *         返回true，继续处理
+     *         返回false，失败结束循环
      */
     boolean process(byte value) throws Exception;
 }
