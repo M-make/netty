@@ -725,14 +725,14 @@
     <module>resolver</module>
     <module>resolver-dns</module>
     <module>resolver-dns-classes-macos</module>
-<!--    <module>resolver-dns-native-macos</module>-->
+    <module>resolver-dns-native-macos</module>
     <module>transport</module>
-<!--    <module>transport-native-unix-common-tests</module>-->
-<!--    <module>transport-native-unix-common</module>-->
+    <module>transport-native-unix-common-tests</module>
+    <module>transport-native-unix-common</module>
     <module>transport-classes-epoll</module>
-<!--    <module>transport-native-epoll</module>-->
+    <module>transport-native-epoll</module>
     <module>transport-classes-kqueue</module>
-<!--    <module>transport-native-kqueue</module>-->
+    <module>transport-native-kqueue</module>
     <module>transport-rxtx</module>
     <module>transport-sctp</module>
     <module>transport-udt</module>
@@ -745,10 +745,10 @@
     <module>testsuite-http2</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
-<!--    <module>testsuite-native</module>-->
-<!--    <module>testsuite-native-image</module>-->
-<!--    <module>testsuite-native-image-client</module>-->
-<!--    <module>testsuite-native-image-client-runtime-init</module>-->
+    <module>testsuite-native</module>
+    <module>testsuite-native-image</module>
+    <module>testsuite-native-image-client</module>
+    <module>testsuite-native-image-client-runtime-init</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>bom</module>
